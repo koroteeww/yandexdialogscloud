@@ -11,7 +11,7 @@ https://yandex.ru/dev/dialogs/alice/doc/request.html
 https://yandex.ru/dev/dialogs/alice/doc/response.html
 
 известные проблемы: 
-если передано в запросе nlu YANDEX.NUMBER то парсинг валится с ошибкой
+1)если передано в запросе nlu YANDEX.NUMBER то парсинг валится с ошибкой
 https://yandex.ru/dev/dialogs/alice/doc/naming-entities.html
-
+пофиксено в релизе <a href="https://github.com/koroteeww/yandexdialogscloud/commit/c68a3bfac6f9033bdc99630e6f6eec27db73e067">c68a3bf</a>
       
