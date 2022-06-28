@@ -122,12 +122,145 @@ namespace Function {
         public IEnumerable<string> Tokens { get; set; }
 
         [JsonPropertyName("entities")]
-        public IEnumerable<string> Entities { get; set; }
+        public IEnumerable<NluEntity> Entities { get; set; }
 
         [JsonPropertyName("intents")]
         public object Intents { get; set; }
     }
+	public class NluEntity
+	{
+		[JsonPropertyName("type")]
+		public string type { get; set; }
+		
+		[JsonPropertyName("tokens")]
+		public NluTokens tokens { get; set; }
+		
+		[JsonPropertyName("value")]
+		[JsonConverter(typeof(NluValueConverter))]
+		public NluValue value { get; set; }
+	}
+	public class NluTokens
+	{
+		[JsonPropertyName("start")]
+		public int start { get; set; }
+		[JsonPropertyName("end")]
+		public int end { get; set; }
+		
+	}
+	#region NLU
+	public class NluValueConverter : EnumerableConverter<NluValue>
+    {
+        protected override NluValue ToItem(ref Utf8JsonReader reader, JsonSerializerOptions options)
+        {
+            return AliceEntityModelConverterHelper.ToItem(ref reader, options);
+        }
 
+        protected override void WriteItem(Utf8JsonWriter writer, NluValue item, JsonSerializerOptions options)
+        {
+            ConverterHelper.WriteItem(writer, item, options);
+        }
+    }
+	public static class ConverterHelper
+    {
+        public static void WriteItem<T>(Utf8JsonWriter writer, T value, JsonSerializerOptions options)
+        {
+            object newValue = null;
+            if (value != null)
+            {
+                newValue = Convert.ChangeType(value, value.GetType(), CultureInfo.InvariantCulture);
+            }
+
+            JsonSerializer.Serialize(writer, newValue, options);
+        }
+    }
+	public static class AliceEntityModelConverterHelper
+    {
+        private static readonly Dictionary<string, Type> _typeMap = new Dictionary<string, Type>
+        {
+            { AliceConstants.AliceEntityTypeValues.Geo, typeof(AliceEntityGeoModel) },
+            { AliceConstants.AliceEntityTypeValues.Fio, typeof(AliceEntityFioModel) },
+            { AliceConstants.AliceEntityTypeValues.Number, typeof(AliceEntityNumberModel) },
+            { AliceConstants.AliceEntityTypeValues.DateTime, typeof(AliceEntityDateTimeModel) },
+            { AliceConstants.AliceEntityTypeValues.String, typeof(AliceEntityStringModel) },
+        };
+
+        public static NluValue ToItem(ref Utf8JsonReader reader, JsonSerializerOptions options)
+        {
+            if (reader.TokenType == JsonTokenType.Null)
+            {
+                return null;
+            }
+
+            var readerAtStart = reader;
+
+            string type = null;
+            using (var jsonDocument = JsonDocument.ParseValue(ref reader))
+            {
+                var jsonObject = jsonDocument.RootElement;
+
+                type = jsonObject
+                    .EnumerateObject()
+                    .FirstOrDefault(x => x.Name == "type")
+                    .Value.GetString();
+            }
+			var targetType = typeof(NluValue);
+			if (type=="YANDEX.NUMBER") targetType = typeof(int);
+			
+            if (!string.IsNullOrEmpty(type)  )
+            {
+                if (type!="YANDEX.NUMBER")
+					return JsonSerializer.Deserialize(ref readerAtStart, targetType, options) as NluValue;
+				else
+				{ 
+					var intval = JsonSerializer.Deserialize(ref readerAtStart, targetType, options) as int;
+					NluValue valres = new NluValue();
+					valres.intvalue = intval;
+					return valres;
+				}
+            }
+			
+            
+        }
+    }
+	
+	
+	public class NluValue
+	{
+		[JsonPropertyName("value")]
+		public string intvalue { get; set; }
+		
+		[JsonPropertyName("first_name")]
+		public string first_name { get; set; }
+		
+		[JsonPropertyName("last_name")]
+		public string last_name { get; set; }
+		
+		[JsonPropertyName("patronymic_name")]
+		public string patronymic_name { get; set; }
+		
+		[JsonPropertyName("street")]
+		public string street { get; set; }
+		
+		[JsonPropertyName("house_number")]
+		public string house_number { get; set; }
+		
+		[JsonPropertyName("city")]
+		public string city { get; set; }
+		
+		[JsonPropertyName("country")]
+		public string country { get; set; }
+		
+		[JsonPropertyName("airport ")]
+		public string airport  { get; set; }
+		
+		[JsonPropertyName("day")]
+		public string day { get; set; }
+		
+		[JsonPropertyName("day_is_relative")]
+		public string day_is_relative { get; set; }
+		
+	}
+	#endregion
     public class BaseRequest {
         public string httpMethod { get; set; }
         public string body { get; set; }
@@ -159,10 +292,13 @@ namespace Function {
 			//some random guid
 			sh.content_id = "88f83f54-1135-4238-85c4-5e45959a64d0";
 			sh.id = "88f83f54-1135-4238-85c4-5e45959a64d0";
-			sh.publication_date = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture);
+			sh.publication_date = DateTime.UtcNow.ToString("o");
 			
+            if (request.Request.Command == "привет") 
+                request.Request.Command = request.Request.Command + " медвед ";
+
 			Response.ShowItemMeta = sh;
-			Response.Text = request.Request.Command;
+			Response.Text = "ПРИВЕТ ПОВЕЛИТЕЛЬ! "+request.Request.Command;
 			Response.Tts = Response.Text;
 			
 		}
