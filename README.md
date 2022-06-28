@@ -11,6 +11,7 @@ https://yandex.ru/dev/dialogs/alice/doc/request.html
 https://yandex.ru/dev/dialogs/alice/doc/response.html
 
 известные проблемы: 
-если передано в запросе Имя, то не парсится nlu. например:
+если передано в запросе nlu YANDEX.NUMBER то парсинг валится с ошибкой
+https://yandex.ru/dev/dialogs/alice/doc/naming-entities.html
 
       
