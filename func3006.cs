@@ -129,7 +129,7 @@ namespace Function
         [JsonConverter(typeof(AliceEntityModelEnumerableConverter))]
         public IEnumerable<AliceEntityModel> Entities { get; set; }
 
-       
+
 
         [JsonPropertyName("intents")]
         public object Intents { get; set; }
@@ -335,11 +335,11 @@ namespace Function
         [JsonPropertyName("tokens")]
         public NluTokens Tokens { get; set; }
 
-        [JsonPropertyName("type")]        
+        [JsonPropertyName("type")]
         public string Type { get; set; }
     }
 
-    
+
 
     public class NluTokens
     {
@@ -350,11 +350,11 @@ namespace Function
 
     }
 
-    
+
 
     #endregion
 
-    
+
 
     public class AliceResponse
     {
@@ -363,9 +363,14 @@ namespace Function
 
         [JsonPropertyName("response")]
         public AliceResponseModel Response { get; set; }
-
+        public AliceResponse()
+        {
+            Version = "1.0";
+            Response = new AliceResponseModel();
+        }
         public AliceResponse(AliceRequestBase request)
         {
+            string funcurl = "https://functions.yandexcloud.net/d4entjkagd3fqn0hum1d";
             Version = request.Version;
             Response = new AliceResponseModel();
             Response.EndSession = false;
@@ -380,38 +385,46 @@ namespace Function
                 reqC = reqC + " медвед ";
             }
 
-			string help=" вот что я умею: скажи чегототам и я сделаю что-нибудь.";
+            string help = " вот что я умею: скажи чегототам и я сделаю что-нибудь.";
+            Response.ShowItemMeta = sh;
+            if (reqC == string.Empty ||
+                reqC.ToLower() == "помощь" ||
+                reqC.ToLower().Contains("что ты умеешь"))
+            {
 
-			if (request.Request.Command == string.Empty || 
-                request.Request.Command.ToLower() == "помощь" || 
-                request.Request.Command.ToLower().Contains("что ты умеешь") )
-			{
-				Response.ShowItemMeta = sh;
                 Response.Text = "Привет! " + help;
-			}
-			else
-			{
+            }
+            else if (reqC.ToLower().Contains("авторизация"))
+            {
+                string auth = "https://oauth.yandex.ru/authorize?response_type=token&client_id=e738f647b8b145948b7a5a622a59819d&redirect_uri="
+                    + funcurl;
+
+                Response.Text = "попробуй эту ссылку " + auth;
+
+            }
+            else
+            {
                 //извлечение чисел из входящего запроса
-				var ints = request.Request.Nlu.Entities.Where(t => t.Type == "YANDEX.NUMBER").ToList();
-				string sints = "";
-				if (ints != null && ints.Count > 0)
-				{
-					sints = ". А еще вот числа из запроса: ";
-					foreach (var item in ints)
-					{
-                        if (item!=null)
+                var ints = request.Request.Nlu.Entities.Where(t => t.Type == "YANDEX.NUMBER").ToList();
+                string sints = "";
+                if (ints != null && ints.Count > 0)
+                {
+                    sints = ". А еще вот числа из запроса: ";
+                    foreach (var item in ints)
+                    {
+                        if (item != null)
 
                             sints = sints + " " + (item as AliceEntityNumberModel).Value;
 
 
                     }
-					
-				}
+
+                }
                 //попугай
-                Response.ShowItemMeta = sh;
-				Response.Text = "ПРИВЕТ ПОВЕЛИТЕЛЬ! вот что прислали: " + reqC + sints;
-				Response.Tts = Response.Text;
-			}
+
+                Response.Text = "ПРИВЕТ ПОВЕЛИТЕЛЬ! вот что прислали: " + reqC + sints;
+                Response.Tts = Response.Text;
+            }
 
         }
     }
@@ -463,10 +476,61 @@ namespace Function
 
     public class Handler
     {
-        public AliceResponse FunctionHandler(AliceRequestBase request)
+        public AliceResponse FunctionHandler(string requestJ)
         {
-            var response = new AliceResponse(request);
-            return response;
+
+            if (requestJ.Contains("version") == false)
+            {
+                if (requestJ.Contains("queryStringParameters"))
+                {
+                    int startQ = requestJ.IndexOf("queryStringParameters");
+                    int start2 = requestJ.IndexOf("code", startQ);
+                    int startCode = requestJ.IndexOf(":", start2);
+                    int endCode = requestJ.IndexOf("}", start2);
+                    string code = requestJ.Substring(startCode, endCode - startCode);
+                    code = code.Replace("'", "");
+                    code = code.Replace(":", "");
+                    code = code.Replace("}", "");
+                    code = code.Replace("u0022", "");
+                    code = code.Replace("\\", "");
+                    code = code.Replace("\'", "");
+                    code = code.Replace("\"", "");
+                    //int icode = Convert.ToInt32(code);
+                    throw new Exception("code=" + code);
+                }
+                else
+                    //hmmm
+                    throw new Exception("req=" + requestJ);
+
+                var response = new AliceResponse();
+                //response.Version = "1.0";
+                //response.Response = new AliceResponseModel();
+                response.Response.EndSession = false;
+                var sh = new ShowMeta();
+                //some random guid
+                sh.content_id = "88f83f54-1135-4238-85c4-5e45959a64d0";
+                sh.id = "88f83f54-1135-4238-85c4-5e45959a64d0";
+                sh.publication_date = DateTime.UtcNow.ToString("o");
+                response.Response.ShowItemMeta = sh;
+                response.Response.Text = "Привет!" + requestJ;
+                return response;
+            }
+            else
+            {
+                AliceRequestBase request = JsonSerializer.Deserialize<AliceRequestBase>(requestJ);
+                var response = new AliceResponse(request);
+                return response;
+            }
+        }
+        public string token(string access_token, string expires_in = "", string token_type = "")
+        {
+            string res = access_token;
+            if (res.Contains("#"))
+                res = res.Substring(res.IndexOf("#"));
+            //hmmm
+            throw new Exception(res);
+
+            return res;
         }
     }
 }
