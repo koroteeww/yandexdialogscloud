@@ -5,7 +5,9 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-
+using System.Net.Http;
+using System.Text;
+using System.Threading.Tasks;
 namespace Function
 {
     public class AliceRequestBase
@@ -353,81 +355,110 @@ namespace Function
 
 
     #endregion
-
-
-
-    public class AliceResponse
+    #region audio
+    public class AliceAudioResponse : IAliceResponse
     {
         [JsonPropertyName("version")]
         public string Version { get; set; }
 
         [JsonPropertyName("response")]
-        public AliceResponseModel Response { get; set; }
-        public AliceResponse()
+        public AliceAudioResponseModel Response { get; set; }
+
+        public AliceAudioResponse()
         {
-            Version = "1.0";
-            Response = new AliceResponseModel();
-        }
-        public AliceResponse(AliceRequestBase request)
-        {
-            string funcurl = "https://functions.yandexcloud.net/d4entjkagd3fqn0hum1d";
-            Version = request.Version;
-            Response = new AliceResponseModel();
-            Response.EndSession = false;
-            var sh = new ShowMeta();
-            //some random guid
-            sh.content_id = "88f83f54-1135-4238-85c4-5e45959a64d0";
-            sh.id = "88f83f54-1135-4238-85c4-5e45959a64d0";
-            sh.publication_date = DateTime.UtcNow.ToString("o");
-            string reqC = request.Request.Command;
-            if (reqC == "привет")
-            {
-                reqC = reqC + " медвед ";
-            }
-
-            string help = " вот что я умею: скажи чегототам и я сделаю что-нибудь.";
-            Response.ShowItemMeta = sh;
-            if (reqC == string.Empty ||
-                reqC.ToLower() == "помощь" ||
-                reqC.ToLower().Contains("что ты умеешь"))
-            {
-
-                Response.Text = "Привет! " + help;
-            }
-            else if (reqC.ToLower().Contains("авторизация"))
-            {
-                string auth = "https://oauth.yandex.ru/authorize?response_type=token&client_id=e738f647b8b145948b7a5a622a59819d&redirect_uri="
-                    + funcurl;
-
-                Response.Text = "попробуй эту ссылку " + auth;
-
-            }
-            else
-            {
-                //извлечение чисел из входящего запроса
-                var ints = request.Request.Nlu.Entities.Where(t => t.Type == "YANDEX.NUMBER").ToList();
-                string sints = "";
-                if (ints != null && ints.Count > 0)
-                {
-                    sints = ". А еще вот числа из запроса: ";
-                    foreach (var item in ints)
-                    {
-                        if (item != null)
-
-                            sints = sints + " " + (item as AliceEntityNumberModel).Value;
-
-
-                    }
-
-                }
-                //попугай
-
-                Response.Text = "ПРИВЕТ ПОВЕЛИТЕЛЬ! вот что прислали: " + reqC + sints;
-                Response.Tts = Response.Text;
-            }
-
+            Response = new AliceAudioResponseModel();
         }
     }
+
+    public class AliceAudioResponseModel
+    {
+        public AliceAudioResponseModel()
+        {
+            ShowItemMeta = new ShowMeta();
+            Directives = new AliceDirectives();
+        }
+        [JsonPropertyName("text")]
+        public string Text { get; set; }
+        [JsonPropertyName("tts")]
+        public string tts { get; set; }
+
+        [JsonPropertyName("end_session")]
+        public bool EndSession { get; set; }
+
+        [JsonPropertyName("should_listen")]
+        public bool ShouldListen { get; set; } = false;
+
+        [JsonPropertyName("show_item_meta")]
+        public ShowMeta ShowItemMeta { get; set; }
+
+        [JsonPropertyName("directives")]
+        public AliceDirectives Directives { get; set; }
+    }
+    public class AliceDirectives
+    {
+        [JsonPropertyName("audio_player")] 
+        public AudioPlayerDirective audioPlayer { get; set; }
+
+        public AliceDirectives()
+        {
+            audioPlayer = new AudioPlayerDirective();
+        }
+    }
+    public class AudioPlayerDirective
+    {
+        [JsonPropertyName("action")] 
+        public string Action { get; set; }
+        [JsonPropertyName("item")]
+        public AudioItem item { get; set; }
+        
+        public AudioPlayerDirective()
+        {
+            item = new AudioItem();
+        }
+    }
+    public class AudioItem
+    {
+        [JsonPropertyName("stream")] 
+        public AudioStream stream { get; set; }
+
+        [JsonPropertyName("metadata")]
+        public AudioMetadata metadata { get; set; }
+
+        public AudioItem()
+        {
+            stream = new AudioStream();
+            stream.token = Guid.NewGuid().ToString();
+            metadata = new AudioMetadata();
+        }
+    }
+    public class AudioStream
+    {
+        [JsonPropertyName("url")] 
+        public string url { get; set; }
+
+        [JsonPropertyName("token")] 
+        public string token { get; set; }
+
+        [JsonPropertyName("offset_ms")]
+        public int offsetms { get; set; } = 0;
+
+    }
+
+    public class AudioMetadata
+    {
+        [JsonPropertyName("title")]
+        public string SongTitle { get; set; }
+        [JsonPropertyName("sub_title")] 
+        public string SongArtist { get; set; }
+
+        [JsonPropertyName("art")]
+        public object SongArtpic { get; set; }
+        [JsonPropertyName("background_image")]
+        public object SongBgimg { get; set; }
+    }
+
+    #endregion
+    
     public class AliceResponseModel
     {
         private string _tts;
@@ -473,10 +504,99 @@ namespace Function
         [JsonPropertyName("content_id")]
         public string content_id { get; set; }
     }
+    public static class Storage
+    {
+        public static string Auth = "";
+        public static string Code = "";
+    }
+    #region LOGIC
+    public class AliceResponse : IAliceResponse
+    {
+        [JsonPropertyName("version")]
+        public string Version { get; set; }
+
+        [JsonPropertyName("response")]
+        public AliceResponseModel Response { get; set; }
+        public AliceResponse()
+        {
+            Version = "1.0";
+            Response = new AliceResponseModel();
+        }
+        public AliceResponse(AliceRequestBase request)
+        {
+            string funcurl = "https://functions.yandexcloud.net/d4entjkagd3fqn0hum1d";
+            Version = request.Version;
+            Response = new AliceResponseModel();
+            Response.EndSession = false;
+            var sh = new ShowMeta();
+            //some random guid
+            sh.content_id = "88f83f54-1135-4238-85c4-5e45959a64d0";
+            sh.id = "88f83f54-1135-4238-85c4-5e45959a64d0";
+            sh.publication_date = DateTime.UtcNow.ToString("o");
+            string reqC = request.Request.Command;
+            if (reqC == "привет")
+            {
+                reqC = reqC + " медвед ";
+            }
+
+            string help = " вот что я умею: скажи чегототам и я сделаю что-нибудь.";
+            Response.ShowItemMeta = sh;
+            if (reqC == string.Empty ||
+                reqC.ToLower() == "помощь" ||
+                reqC.ToLower().Contains("что ты умеешь"))
+            {
+
+                Response.Text = "Привет! " + help;
+            }
+            else if (reqC.ToLower().Contains("авторизация"))
+            {
+                string auth = "https://oauth.yandex.ru/authorize?response_type=code&client_id=e738f647b8b145948b7a5a622a59819d&redirect_uri="
+                    + funcurl;
+
+                Response.Text = "попробуй эту ссылку " + auth;
+
+            }
+            else if (reqC.ToLower().Contains("проверка"))
+            {
+                Response.Text = "code=" + Storage.Code + " токен =" + Storage.Auth;
+            }
+            else if (reqC.ToLower().Contains("проверка"))
+            {
+
+            }
+            else
+            {
+                //извлечение чисел из входящего запроса
+                var ints = request.Request.Nlu.Entities.Where(t => t.Type == "YANDEX.NUMBER").ToList();
+                string sints = "";
+                if (ints != null && ints.Count > 0)
+                {
+                    sints = ". А еще вот числа из запроса: ";
+                    foreach (var item in ints)
+                    {
+                        if (item != null)
+
+                            sints = sints + " " + (item as AliceEntityNumberModel).Value;
+
+
+                    }
+
+                }
+                //попугай
+
+                Response.Text = "ПРИВЕТ ПОВЕЛИТЕЛЬ! вот что прислали: " + reqC + sints;
+                Response.Tts = Response.Text;
+            }
+
+        }
+    }
+    public interface IAliceResponse
+    { }
+    #endregion
 
     public class Handler
     {
-        public AliceResponse FunctionHandler(string requestJ)
+        public async Task<IAliceResponse> FunctionHandler(string requestJ)
         {
 
             if (requestJ.Contains("version") == false)
@@ -495,31 +615,67 @@ namespace Function
                     code = code.Replace("\\", "");
                     code = code.Replace("\'", "");
                     code = code.Replace("\"", "");
+                    Storage.Code = code;
                     //int icode = Convert.ToInt32(code);
-                    throw new Exception("code=" + code);
+                    //Приложение отправляет код, а также свой идентификатор и пароль в POST-запросе.
+                    HttpClient httpClient = new HttpClient();
+                    httpClient.BaseAddress = new Uri("https://oauth.yandex.ru");
+
+                    Dictionary<string, string> headers = new Dictionary<string, string>();
+                    headers.Add("grant_type", "authorization_code");
+                    headers.Add("code", code);
+                    //e738f647b8b145948b7a5a622a59819d
+                    //95992604fc3748659bb019212c3f30de
+                    headers.Add("client_id", "23cabbbdc6cd418abb4b39c32c41195d");
+                    headers.Add("client_secret", "53bc75238f0c4d08a118e51fe9203300");
+
+
+                    var httpcontent = new FormUrlEncodedContent(headers);
+
+                    var webRequest = new HttpRequestMessage(HttpMethod.Post, "https://oauth.yandex.ru/token")
+                    {
+                        Content = httpcontent
+                    };
+
+                    var res = await httpClient.PostAsync("https://oauth.yandex.ru/token",httpcontent);
+
+                    var jsonBody = res.Content.ReadAsStringAsync().Result;
+                    int st = jsonBody.IndexOf("access_token");
+                    int st2 = jsonBody.IndexOf(":",st);
+                    int st3 = jsonBody.IndexOf(",", st2);
+                    string auf = jsonBody.Substring(st2, st3 - st2);
+                    auf = auf.Replace(":", "");
+                    auf = auf.Replace("\"", "");
+                    auf = auf.Trim();
+                    Storage.Auth = auf;
+                    return new AliceResponse();
+                    //throw new Exception("auf=" + auf);
                 }
                 else
                     //hmmm
                     throw new Exception("req=" + requestJ);
 
-                var response = new AliceResponse();
-                //response.Version = "1.0";
-                //response.Response = new AliceResponseModel();
-                response.Response.EndSession = false;
-                var sh = new ShowMeta();
-                //some random guid
-                sh.content_id = "88f83f54-1135-4238-85c4-5e45959a64d0";
-                sh.id = "88f83f54-1135-4238-85c4-5e45959a64d0";
-                sh.publication_date = DateTime.UtcNow.ToString("o");
-                response.Response.ShowItemMeta = sh;
-                response.Response.Text = "Привет!" + requestJ;
-                return response;
+                
             }
             else
             {
                 AliceRequestBase request = JsonSerializer.Deserialize<AliceRequestBase>(requestJ);
-                var response = new AliceResponse(request);
-                return response;
+                if (request.Request.Command.ToLower().Contains("аудио"))
+                {
+                    var audio = new AliceAudioResponse();
+                    audio.Response.Text = "послушай эту музыку";
+                    audio.Response.tts = "послушай эту музыку";
+                    //from api.Track.GetFileLink
+                    audio.Response.Directives.audioPlayer.item.stream.url = "https://s53sas.storage.yandex.net/get-mp3/1659b4f005c147acbd5a601d8d0a4c5855992b59/0005e2c05c65f84d/rmusic/U2FsdGVkX1_GK5XMhybGzFpjubChT1YEso7Ai2Fl1iepxICrrCW0XvlkpeB9mwjXmkHCnwrQnLojkHnidVcc7nfbQcWw7hbuPHDNKdaIXso/6e384b312cdfe5fc7cbc23f094a9be3ca04ebac6d25bae22ab1d9debaed51094/31487";
+                    audio.Response.Directives.audioPlayer.item.metadata.SongTitle = "question";
+                    audio.Response.Directives.audioPlayer.item.metadata.SongArtist = "System of a down";
+                    return audio;
+                }
+                else
+                {
+                    var response = new AliceResponse(request);
+                    return response;
+                }
             }
         }
         public string token(string access_token, string expires_in = "", string token_type = "")
