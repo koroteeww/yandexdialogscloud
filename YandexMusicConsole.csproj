@@ -8,13 +8,18 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="func.cs" />
+    <Compile Remove="func3006.cs" />
+    <Compile Remove="yandex.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
   </ItemGroup>
 
   <ItemGroup>
     <Reference Include="Yandex.Music.Api">
-      <HintPath>..\..\..\..\..\..\work\alice_ya\Yandex.Music.Api-master\Yandex.Music.Api-master\Yandex.Music.Api\bin\Debug\net5.0\Yandex.Music.Api.dll</HintPath>
-      <Private>True</Private>
+      <HintPath>D:\dotnet\YandexMusicConsole\YandexMusicConsole\bin\Debug\net6.0\Yandex.Music.Api.dll</HintPath>
     </Reference>
   </ItemGroup>
 

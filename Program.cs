@@ -1,5 +1,5 @@
 ﻿using Yandex;
-
+using Yandex.Music.Api.Models.Track;
 
 Console.WriteLine("Hello, World!");
 string login = "koroteeww@yandex.ru";
@@ -35,33 +35,52 @@ var urla = client.BuildUrl(track3.Track);
 //names start
 Console.WriteLine("---");
 string names = "";
+List<YTrackContainer> tracksALL = new List<YTrackContainer>();
 foreach (var playlist in plFavs)
 {
-    names = names + "<"+playlist.Title + ">" + Environment.NewLine;
+    var more = client.GetPlaylist(login, playlist.Kind);
+    names = names + "<" + playlist.Title + "> " + more.Tracks.Count + Environment.NewLine;
 }
 Console.WriteLine(names);
 names = "";
 Console.WriteLine("---");
 foreach (var playlist in plPeronal)
 {
-    names = names + "<" + playlist.Title + ">" + Environment.NewLine;
+    tracksALL.AddRange(playlist.Tracks);
+    names = names + "<" + playlist.Title + ">" + playlist.Tracks.Count + Environment.NewLine;
 }
 Console.WriteLine(names);
 Console.WriteLine("---");
 //names end
 //tracks shuffle
-List<Yandex.Music.Api.Models.Track.YTrack> tracks1 = new List<Yandex.Music.Api.Models.Track.YTrack>();
-foreach (var track in testIt.Tracks)
-{
-    tracks1.Add(track.Track);
-}
-var rnd = new Random();
-var randomizedTracks = tracks1.OrderBy(item => rnd.Next()).ToList();
+//List<Yandex.Music.Api.Models.Track.YTrack> tracks1 = new List<Yandex.Music.Api.Models.Track.YTrack>();
+//foreach (var track in testIt.Tracks)
+//{
+//    tracks1.Add(track.Track);
+//}
+//var rnd = new Random();
+//var randomizedTracks = tracks1.OrderBy(item => rnd.Next()).ToList();
 //change in pl
 //client.ChangePlaylistTracks(myPl, tracks1.ToArray() , randomizedTracks.ToArray() );
 string name = "random_" + DateTime.Now.ToString("yyyy_MM_dd_HH_mm_ss");
 //var res3 = client.CreateWithTracks(name, randomizedTracks.ToArray());
-
+//Random rng = new Random();
+//int n = tracksALL.Count;
+//while (n > 1)
+//{
+//    n--;
+//    int k = rng.Next(n + 1);
+//    var value = tracksALL[k];
+//    tracksALL[k] = tracksALL[n];
+//    tracksALL[n] = value;
+//}
+////
+//List<YTrack> susus = new List<YTrack>();
+//foreach (var item in tracksALL)
+//{
+//    susus.Add(item.Track);
+//}
+//var res3 = client.CreateWithTracks(name, susus.ToArray());
 //Console.WriteLine("SHUFFLED "+res3.Tracks.Count);
 
 Console.ReadLine();
